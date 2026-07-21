@@ -125,7 +125,7 @@ private:
 	void								_complete(const asio::error_code& e, std::size_t bytes_transferred,
 												realm::protocolv1::PacketPtr packet_ptr);
 
-	asio::io_service					m_io_service;
+	asio::io_context					m_io_service;
 	std::string							m_ca_file;
 	std::string							m_address;
 	int									m_port;

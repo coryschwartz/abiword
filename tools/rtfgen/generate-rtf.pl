@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env -S perl -w
 #
 # AbiWord
 # Copyright (C) 2004 Hubert Figuiere

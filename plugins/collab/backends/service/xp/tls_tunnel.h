@@ -63,7 +63,7 @@ private:
 
 class Transport : public boost::enable_shared_from_this<Transport> {
 public:
-	asio::io_service& io_service();
+	asio::io_context& io_service();
 	void run();
 	void stop();
 
@@ -72,8 +72,8 @@ protected:
 	virtual ~Transport();
 
 private:
-	asio::io_service io_service_;
-	asio::io_service::work work_;
+	asio::io_context io_service_;
+	asio::executor_work_guard<asio::io_context::executor_type> work_;
 };
 
 typedef boost::shared_ptr<Transport> transport_ptr_t;

@@ -79,13 +79,15 @@ public:
 	}
 };
 
-asio::io_service& Transport::io_service() {
+asio::io_context& Transport::io_service() {
 	return io_service_;
 }
 
 void Transport::run() {
-	asio::error_code ec;
-	io_service_.run(ec);
+	try {
+		io_service_.run();
+	} catch (asio::system_error&) {
+	}
 }
 
 void Transport::stop() {
@@ -94,7 +96,7 @@ void Transport::stop() {
 
 Transport::Transport()
 	: io_service_(),
-	work_(io_service_)
+	work_(asio::make_work_guard(io_service_))
 {
 }
 
@@ -113,20 +115,20 @@ ClientTransport::ClientTransport(const std::string& host, unsigned short port,
 
 void ClientTransport::connect() {
 	asio::ip::tcp::resolver resolver(io_service());
-	asio::ip::tcp::resolver::query query(host_, boost::lexical_cast<std::string>(port_));
-	asio::ip::tcp::resolver::iterator iterator(resolver.resolve(query));
+	asio::ip::tcp::resolver::results_type results =
+		resolver.resolve(host_, boost::lexical_cast<std::string>(port_));
 	socket_ptr_t socket_ptr(new asio::ip::tcp::socket(io_service()));
 
-	if (iterator == asio::ip::tcp::resolver::iterator())
+	if (results.empty())
 		throw asio::system_error(asio::error::host_not_found);
 
 	bool connected = false;
 	asio::error_code error_code;
-	while (iterator != asio::ip::tcp::resolver::iterator())
+	for (const auto& entry : results)
 	{
 		try
 		{
-			socket_ptr->connect(*iterator);
+			socket_ptr->connect(entry.endpoint());
 			connected = true;
 			break;
 		}
@@ -135,7 +137,6 @@ void ClientTransport::connect() {
 			error_code = se.code();
 			try { socket_ptr->close(); } catch(...) {}
 		}
-		iterator++;
 	}
 	if (!connected)
 		throw asio::system_error(error_code); // throw the last error on failure
@@ -145,7 +146,7 @@ void ClientTransport::connect() {
 ServerTransport::ServerTransport(const std::string& ip, unsigned short port, 
 		boost::function<void (transport_ptr_t, socket_ptr_t)> on_connect) 
 	: Transport(),
-	acceptor_(io_service(), asio::ip::tcp::endpoint(asio::ip::address_v4::from_string(ip), port)),
+	acceptor_(io_service(), asio::ip::tcp::endpoint(asio::ip::make_address_v4(ip), port)),
 	on_connect_(on_connect)
 {
 }
@@ -331,7 +332,7 @@ void ClientProxy::setup()
 			try {
 				acceptor_ptr.reset(
 						new asio::ip::tcp::acceptor(transport_ptr_->io_service(),
-														asio::ip::tcp::endpoint(asio::ip::address_v4::from_string(local_address_),
+														asio::ip::tcp::endpoint(asio::ip::make_address_v4(local_address_),
 														port), false));
 				local_port_ = port;
 				break;
@@ -475,15 +476,15 @@ void ServerProxy::on_transport_connect(transport_ptr_t transport_ptr, socket_ptr
 	socket_ptr_t local_socket_ptr(new asio::ip::tcp::socket(transport_ptr->io_service()));
 	try {
 		asio::ip::tcp::resolver resolver(transport_ptr->io_service());
-		asio::ip::tcp::resolver::query query("127.0.0.1", boost::lexical_cast<std::string>(local_port_));
-		asio::ip::tcp::resolver::iterator iterator(resolver.resolve(query));
+		asio::ip::tcp::resolver::results_type results =
+			resolver.resolve("127.0.0.1", boost::lexical_cast<std::string>(local_port_));
 
 		bool connected = false;
-		while (iterator != asio::ip::tcp::resolver::iterator())
+		for (const auto& entry : results)
 		{
 			try
 			{
-				local_socket_ptr->connect(*iterator);
+				local_socket_ptr->connect(entry.endpoint());
 				connected = true;
 				break;
 			}
@@ -493,7 +494,6 @@ void ServerProxy::on_transport_connect(transport_ptr_t transport_ptr, socket_ptr
 				// may have been opened by the connect() call.
 				try { local_socket_ptr->close(); } catch(...) {}
 			}
-			iterator++;
 		}
 		if (!connected)
 		{

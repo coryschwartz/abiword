@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 #
 # This program analyzes the strings and dumps out a HTML
 # page with information about those strings.

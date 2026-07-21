@@ -35,7 +35,7 @@ class TCPAccountHandler;
 class Session : public Synchronizer, public boost::noncopyable, public boost::enable_shared_from_this<Session>
 {
 public:
-	Session(asio::io_service& io_service, boost::function<void (boost::shared_ptr<Session>)> ef)
+	Session(asio::io_context& io_service, boost::function<void (boost::shared_ptr<Session>)> ef)
 		: Synchronizer(boost::bind(&Session::_signal, this)),
 		socket(io_service),
 		queue_protector(),
@@ -43,9 +43,9 @@ public:
 	{
 	}
 
-	void connect(asio::ip::tcp::resolver::iterator& iterator)
+	void connect(const asio::ip::tcp::endpoint& endpoint)
 	{
-		socket.connect(*iterator);
+		socket.connect(endpoint);
 	}
 
 	// TODO: don't expose this

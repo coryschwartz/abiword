@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 # This script replace the cdump tool we used to build the ap_wp_Splash.cpp 
 # Because the cdump tool has to be run as a part of building the AW package,

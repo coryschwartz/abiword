@@ -27,6 +27,7 @@
 #include <list>
 
 #include <libxml/uri.h>
+#include <libxml/xmlmemory.h>
 
 #include "ut_assert.h"
 #include "ut_std_string.h"

@@ -16,6 +16,7 @@
  * 02110-1301 USA.
  */
 
+#include <boost/array.hpp>
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
 #include <boost/lexical_cast.hpp>
@@ -76,17 +77,17 @@ bool RealmConnection::connect()
 		}
 
 		// connect!
-		asio::ip::tcp::resolver::query query(address, boost::lexical_cast<std::string>(port));
 		asio::ip::tcp::resolver resolver(m_io_service);
-		asio::ip::tcp::resolver::iterator iterator(resolver.resolve(query));
+		asio::ip::tcp::resolver::results_type results =
+			resolver.resolve(address, boost::lexical_cast<std::string>(port));
 
 		bool connected = false;
 		asio::error_code error_code;
-		while (iterator != asio::ip::tcp::resolver::iterator())
+		for (const auto& entry : results)
 		{
 			try
 			{
-				m_socket.connect(*iterator);
+				m_socket.connect(entry.endpoint());
 				connected = true;
 				break;
 			}
@@ -95,7 +96,6 @@ bool RealmConnection::connect()
 				error_code = se.code();
 				try { m_socket.close(); } catch(...) {}
 			}
-			iterator++;
 		}
 		if (!connected)
 		{
@@ -131,7 +131,7 @@ bool RealmConnection::connect()
 	// start reading realm messages
 	_receive();	
 	
-	m_thread_ptr.reset(new asio::thread(boost::bind(&asio::io_service::run, &m_io_service)));
+	m_thread_ptr.reset(new asio::thread(boost::bind(&asio::io_context::run, &m_io_service)));
 	return true;
 }
 

@@ -25,6 +25,7 @@
 #include <stdint.h>
 #endif
 #include <boost/bind.hpp>
+#include <gio/gio.h>
 #include "InterruptableAsyncWorker.h"
 #include "soa_soup.h"
 
@@ -67,25 +68,20 @@ private:
 		UT_DEBUGMSG(("ProgressiveSoapCall::invoke()\n"));
 		return soup_soa::invoke(
 						m_uri, m_mi, m_ssl_ca_file,
-						boost::bind(&ProgressiveSoapCall::_progress_cb, this, _1, _2, _3),
+						boost::bind(&ProgressiveSoapCall::_progress_cb, this, _1, _2),
 						m_result
 					);
 	}
 
-	void _progress_cb(SoupSession* session, SoupMessage* msg, uint32_t progress)
+	void _progress_cb(GCancellable* cancellable, uint32_t progress)
 	{
 		UT_DEBUGMSG(("ProgressiveSoapCall::_progress_cb()\n"));
-		UT_return_if_fail(session && msg);
+		UT_return_if_fail(cancellable);
 		UT_return_if_fail(m_worker_ptr);
 
 		if (m_worker_ptr->cancelled())
 		{
-#ifdef SOUP24
-			soup_session_cancel_message(session, msg, SOUP_STATUS_CANCELLED);
-#else
-			soup_message_set_status(msg, SOUP_STATUS_CANCELLED);
-			soup_session_cancel_message(session, msg);
-#endif
+			g_cancellable_cancel(cancellable);
 			return;
 		}
 

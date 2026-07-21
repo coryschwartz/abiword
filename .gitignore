@@ -61,3 +61,8 @@ m4/lt~obsolete.m4
 /src/plugins/builtin-stamp
 /src/wp/ap/xp/ap_wp_sidebar.cpp
 /src/wp/main/cocoa/bundle/Info.plist
+/com.abisource.AbiWord.appdata.xml
+/src/abi-resources.c
+/src/abi-resources.h
+/src/wp/test/unix/testwrap.sh
+/src/wp/test/win/testwrap.sh

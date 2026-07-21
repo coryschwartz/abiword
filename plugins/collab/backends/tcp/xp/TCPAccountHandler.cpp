@@ -29,7 +29,7 @@
 TCPAccountHandler::TCPAccountHandler()
 	: AccountHandler(),
 	m_io_service(),
-	m_work(m_io_service),
+	m_work(asio::make_work_guard(m_io_service)),
 	m_thread(0),
 	m_bConnected(false),
 	m_pDelegator(0)
@@ -79,8 +79,8 @@ ConnectResult TCPAccountHandler::connect()
 	UT_return_val_if_fail(!m_pDelegator, CONNECT_INTERNAL_ERROR);
 	UT_return_val_if_fail(!m_bConnected, CONNECT_ALREADY_CONNECTED);
 	UT_return_val_if_fail(!m_thread, CONNECT_INTERNAL_ERROR);
-	m_io_service.reset();
-	m_thread = new asio::thread(boost::bind(&asio::io_service::run, &m_io_service));
+	m_io_service.restart();
+	m_thread = new asio::thread(boost::bind(&asio::io_context::run, &m_io_service));
 
 	// set up the connection
 	if (getProperty("server") == "")
@@ -117,17 +117,17 @@ ConnectResult TCPAccountHandler::connect()
 		try
 		{
 			asio::ip::tcp::resolver resolver(m_io_service);
-			asio::ip::tcp::resolver::query query(getProperty("server"), getProperty("port"));
-			asio::ip::tcp::resolver::iterator iterator(resolver.resolve(query));
+			asio::ip::tcp::resolver::results_type results =
+				resolver.resolve(getProperty("server"), getProperty("port"));
 
 			bool connected = false;
 			boost::shared_ptr<Session> session_ptr(new Session(m_io_service, boost::bind(&TCPAccountHandler::handleEvent, this, _1)));
-			while (iterator != asio::ip::tcp::resolver::iterator())
+			for (const auto& entry : results)
 			{
 				try
 				{
 					UT_DEBUGMSG(("Attempting to connect...\n"));
-					session_ptr->connect(iterator);
+					session_ptr->connect(entry.endpoint());
 					UT_DEBUGMSG(("Connected!\n"));
 					connected = true;
 					break;
@@ -139,7 +139,6 @@ ConnectResult TCPAccountHandler::connect()
 					// may have been opened by the connect() call.
 					try { session_ptr->getSocket().close(); } catch(...) {}
 				}
-				iterator++;
 			}
 
 			if (!connected)
